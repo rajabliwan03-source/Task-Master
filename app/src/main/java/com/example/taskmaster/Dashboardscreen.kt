@@ -15,12 +15,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
 class Dashboardscreen : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var taskAdapter: TaskAdapter
     private lateinit var emptyStateText: TextView
+    private lateinit var auth: FirebaseAuth
     
     private val fullTaskList = listOf(
         Task("Finish Project Proposal", "Work", "10:00 AM"),
@@ -34,11 +38,24 @@ class Dashboardscreen : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        auth = Firebase.auth
+        
         enableEdgeToEdge()
         setContentView(R.layout.activity_dashboardscreen)
 
         initViews()
         setupSearchAndFilters()
+        updateWelcomeMessage()
+    }
+
+    private fun updateWelcomeMessage() {
+        val currentUser = auth.currentUser
+        val welcomeText = findViewById<TextView>(R.id.welcome_user_text)
+        if (currentUser != null) {
+            val name = currentUser.displayName ?: currentUser.email?.split("@")?.get(0) ?: "User"
+            welcomeText.text = "Welcome back, $name!"
+        }
     }
 
     private fun initViews() {

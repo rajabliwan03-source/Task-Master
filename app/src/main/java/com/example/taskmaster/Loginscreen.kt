@@ -2,8 +2,6 @@ package com.example.taskmaster
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Patterns
@@ -18,6 +16,9 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
 class Loginscreen : AppCompatActivity() {
 
@@ -26,9 +27,12 @@ class Loginscreen : AppCompatActivity() {
     private lateinit var emailEditText: TextInputEditText
     private lateinit var passwordEditText: TextInputEditText
     private lateinit var loginButton: MaterialButton
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        auth = Firebase.auth
         
         enableEdgeToEdge()
         setContentView(R.layout.activity_loginscreen)
@@ -53,7 +57,6 @@ class Loginscreen : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // Clear errors as user types (Authentic UX)
         val textWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -83,7 +86,7 @@ class Loginscreen : AppCompatActivity() {
         hideKeyboard()
 
         if (validateInputs(email, password)) {
-            performLoginSimulation()
+            performFirebaseLogin(email, password)
         }
     }
 
@@ -109,22 +112,24 @@ class Loginscreen : AppCompatActivity() {
         return isValid
     }
 
-    private fun performLoginSimulation() {
-        // Disable button and show progress for "Authentic" feel
+    private fun performFirebaseLogin(email: String, password: String) {
         loginButton.isEnabled = false
         loginButton.text = getString(R.string.logging_in)
 
-        // Simulate network delay
-        Handler(Looper.getMainLooper()).postDelayed({
-            loginButton.isEnabled = true
-            loginButton.text = getString(R.string.login_button)
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                loginButton.isEnabled = true
+                loginButton.text = getString(R.string.login_button)
 
-            Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
-            
-            val intent = Intent(this, Dashboardscreen::class.java)
-            startActivity(intent)
-            finish()
-        }, 1500)
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "Welcome to TaskMaster!", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, Dashboardscreen::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    Toast.makeText(this, "Authentication failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                }
+            }
     }
 
     private fun hideKeyboard() {

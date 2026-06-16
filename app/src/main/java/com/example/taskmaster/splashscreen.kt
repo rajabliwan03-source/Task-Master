@@ -14,7 +14,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 @SuppressLint("CustomSplashScreen")
-class SplashScreen : AppCompatActivity() {
+class Splashscreen : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,27 +22,32 @@ class SplashScreen : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_splashscreen)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        val mainView = findViewById<View>(R.id.main)
+        if (mainView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+                insets
+            }
         }
 
         // Animate the logo container for a professional feel
         val logoContainer = findViewById<View>(R.id.logo_container)
-        val fadeIn = AlphaAnimation(0f, 1f).apply {
-            duration = 1200
-            fillAfter = true
+        if (logoContainer != null) {
+            val fadeIn = AlphaAnimation(0f, 1f).apply {
+                duration = 1200
+                fillAfter = true
+            }
+            logoContainer.startAnimation(fadeIn)
         }
-        logoContainer.startAnimation(fadeIn)
 
-        // Delayed navigation to MainActivity
+        // Delayed navigation to Authentication Screen
         Handler(Looper.getMainLooper()).postDelayed({
-            navigateToMain()
+            navigateToAuth()
         }, 2500)
     }
 
-    private fun navigateToMain() {
+    private fun navigateToAuth() {
         val intent = Intent(this, Authenticationscreen::class.java)
         startActivity(intent)
         
