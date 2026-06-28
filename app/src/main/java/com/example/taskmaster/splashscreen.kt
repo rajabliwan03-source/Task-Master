@@ -42,9 +42,12 @@ class Splashscreen : AppCompatActivity() {
         }
 
         // Delayed navigation to Authentication Screen
-        Handler(Looper.getMainLooper()).postDelayed({
-            navigateToAuth()
-        }, 2500)
+        Handler(Looper.getMainLooper()).postDelayed(
+            {
+                navigateToAuth()
+            },
+            2500,
+        )
     }
 
     private fun navigateToAuth() {
