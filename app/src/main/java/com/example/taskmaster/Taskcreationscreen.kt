@@ -179,10 +179,10 @@ class Taskcreationscreen : AppCompatActivity() {
             val result = firestoreRepository.saveTask(
                 title = name,
                 description = desc,
-                priority = category // mapping category to priority for this example
+                priority = category, // mapping category to priority for this example
             )
 
-            setLoading(false)
+            setLoading(isLoading = false)
 
             result.onSuccess { docId ->
                 // Also save locally to Room for offline support

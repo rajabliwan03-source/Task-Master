@@ -46,19 +46,8 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         repository.update(task.copy(isCompleted = !task.isCompleted))
     }
 
-    fun updateTask(task: Task) = viewModelScope.launch {
-        repository.update(task)
-    }
-
     fun deleteTask(task: Task) = viewModelScope.launch {
         repository.delete(task)
-    }
-
-    fun getTaskById(id: Int): LiveData<Task?> {
-        // We can add a getTaskById to DAO if needed, or filter allTasks.
-        // For simplicity, let's assume we pass the task ID and fetch it.
-        // I'll add it to DAO/Repository for a proper architectural fix.
-        return repository.allTasks.map { tasks -> tasks.find { it.id == id } }.asLiveData()
     }
 }
 
