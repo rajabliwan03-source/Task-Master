@@ -3,21 +3,26 @@ package com.example.taskmaster
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -25,14 +30,19 @@ class Taskcreationscreen : AppCompatActivity() {
 
     private lateinit var taskNameLayout: TextInputLayout
     private lateinit var taskNameEditText: TextInputEditText
+    private lateinit var taskDescEditText: TextInputEditText
     private lateinit var categoryLayout: TextInputLayout
     private lateinit var categoryDropdown: AutoCompleteTextView
     private lateinit var selectedDateText: TextView
     private lateinit var selectedTimeText: TextView
+    private lateinit var saveButton: MaterialButton
+    private lateinit var progressBar: ProgressBar
     
-    private var selectedDate: Long? = null
-    private var selectedHour: Int? = null
-    private var selectedMinute: Int? = null
+    private var selectedDateStr: String = ""
+    private var selectedTimeStr: String = ""
+
+    private val viewModel: TaskViewModel by viewModels()
+    private val firestoreRepository = FirestoreRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,10 +66,13 @@ class Taskcreationscreen : AppCompatActivity() {
 
         taskNameLayout = findViewById(R.id.task_name_layout)
         taskNameEditText = findViewById(R.id.task_name_edit_text)
+        taskDescEditText = findViewById(R.id.task_desc_edit_text)
         categoryLayout = findViewById(R.id.category_layout)
         categoryDropdown = findViewById(R.id.category_dropdown)
         selectedDateText = findViewById(R.id.selected_date_text)
         selectedTimeText = findViewById(R.id.selected_time_text)
+        saveButton = findViewById(R.id.save_button)
+        progressBar = findViewById(R.id.progress_bar)
     }
 
     private fun setupToolbar() {
@@ -83,9 +96,9 @@ class Taskcreationscreen : AppCompatActivity() {
                 .build()
 
             datePicker.addOnPositiveButtonClickListener { selection ->
-                selectedDate = selection
-                val sdf = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault())
-                selectedDateText.text = getString(R.string.date_format, sdf.format(selection))
+                val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                selectedDateStr = sdf.format(selection)
+                selectedDateText.text = getString(R.string.date_format, selectedDateStr)
             }
             datePicker.show(supportFragmentManager, "DATE_PICKER")
         }
@@ -99,19 +112,16 @@ class Taskcreationscreen : AppCompatActivity() {
                 .build()
 
             timePicker.addOnPositiveButtonClickListener {
-                selectedHour = timePicker.hour
-                selectedMinute = timePicker.minute
                 val amPm = if (timePicker.hour < 12) "AM" else "PM"
                 val hour = if (timePicker.hour % 12 == 0) 12 else timePicker.hour % 12
-                val timeString = String.format(Locale.getDefault(), "%02d:%02d %s", hour, selectedMinute, amPm)
-                selectedTimeText.text = getString(R.string.time_format, timeString)
+                selectedTimeStr = String.format(Locale.getDefault(), "%02d:%02d %s", hour, timePicker.minute, amPm)
+                selectedTimeText.text = getString(R.string.time_format, selectedTimeStr)
             }
             timePicker.show(supportFragmentManager, "TIME_PICKER")
         }
     }
 
     private fun setupListeners() {
-        // Quick Suggestion Chips
         val chipGroup = findViewById<com.google.android.material.chip.ChipGroup>(R.id.suggestion_chip_group)
         for (i in 0 until chipGroup.childCount) {
             val chip = chipGroup.getChildAt(i) as com.google.android.material.chip.Chip
@@ -133,7 +143,7 @@ class Taskcreationscreen : AppCompatActivity() {
             categoryLayout.error = null
         }
 
-        findViewById<MaterialButton>(R.id.save_button).setOnClickListener {
+        saveButton.setOnClickListener {
             validateAndSaveTask()
         }
     }
@@ -141,6 +151,7 @@ class Taskcreationscreen : AppCompatActivity() {
     private fun validateAndSaveTask() {
         val name = taskNameEditText.text.toString().trim()
         val category = categoryDropdown.text.toString().trim()
+        val desc = taskDescEditText.text.toString().trim()
 
         if (name.isEmpty()) {
             taskNameLayout.error = getString(R.string.task_name_required)
@@ -151,8 +162,40 @@ class Taskcreationscreen : AppCompatActivity() {
             categoryLayout.error = getString(R.string.category_required)
             return
         }
+        
+        if (selectedDateStr.isEmpty()) {
+            Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        Toast.makeText(this, "Task '$name' Saved Successfully!", Toast.LENGTH_SHORT).show()
-        finish()
+        // UX: Show loading state
+        setLoading(true)
+
+        // Upload to Firestore using Coroutines for optimal performance
+        lifecycleScope.launch {
+            val result = firestoreRepository.saveTask(
+                title = name,
+                description = desc,
+                priority = category // mapping category to priority for this example
+            )
+
+            setLoading(false)
+
+            result.onSuccess { docId ->
+                // Also save locally to Room for offline support
+                viewModel.addTask(name, category, selectedTimeStr, selectedDateStr, desc)
+                
+                Toast.makeText(this@Taskcreationscreen, "Task uploaded to Firestore! ID: $docId", Toast.LENGTH_SHORT).show()
+                finish()
+            }.onFailure { e ->
+                Toast.makeText(this@Taskcreationscreen, "Firestore upload failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun setLoading(isLoading: Boolean) {
+        saveButton.isEnabled = !isLoading
+        saveButton.text = if (isLoading) "" else getString(R.string.save_task_button)
+        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
     }
 }

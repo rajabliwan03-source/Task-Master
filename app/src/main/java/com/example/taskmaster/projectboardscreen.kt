@@ -25,10 +25,13 @@ class ProjectBoardScreen : AppCompatActivity() {
     }
 
     private fun setupEdgeToEdge() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
-            insets
+        val mainView = findViewById<android.view.View>(R.id.main)
+        if (mainView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+                insets
+            }
         }
     }
 
@@ -40,17 +43,17 @@ class ProjectBoardScreen : AppCompatActivity() {
     }
 
     private fun setupBoards() {
-        // Dummy Data for Columns
+        // Dummy Data for Columns - Updated to use the new Task constructor
         val todoTasks = listOf(
-            Task("Research Competitors", "Work", "09:00 AM"),
-            Task("Draft Design Docs", "Work", "11:30 AM")
+            Task(title = "Research Competitors", category = "Work", time = "09:00 AM"),
+            Task(title = "Draft Design Docs", category = "Work", time = "11:30 AM")
         )
         val inProgressTasks = listOf(
-            Task("Develop Auth Module", "Work", "02:00 PM")
+            Task(title = "Develop Auth Module", category = "Work", time = "02:00 PM")
         )
         val doneTasks = listOf(
-            Task("Setup Project Repository", "Work", "Done"),
-            Task("Initial Meeting", "Work", "Done")
+            Task(title = "Setup Project Repository", category = "Work", time = "Done"),
+            Task(title = "Initial Meeting", category = "Work", time = "Done")
         )
 
         setupRecyclerView(findViewById(R.id.todo_recycler_view), todoTasks)
@@ -60,7 +63,9 @@ class ProjectBoardScreen : AppCompatActivity() {
 
     private fun setupRecyclerView(recyclerView: RecyclerView, tasks: List<Task>) {
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = TaskAdapter(tasks)
+        val adapter = TaskAdapter { /* No action needed for board view currently */ }
+        adapter.submitList(tasks)
+        recyclerView.adapter = adapter
     }
 
     private fun setupFab() {

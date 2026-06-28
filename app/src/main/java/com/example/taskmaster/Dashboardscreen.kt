@@ -2,11 +2,10 @@ package com.example.taskmaster
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.ViewCompat
@@ -15,9 +14,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.auth
 
 class Dashboardscreen : AppCompatActivity() {
 
@@ -26,15 +26,7 @@ class Dashboardscreen : AppCompatActivity() {
     private lateinit var emptyStateText: TextView
     private lateinit var auth: FirebaseAuth
     
-    private val fullTaskList = listOf(
-        Task("Finish Project Proposal", "Work", "10:00 AM"),
-        Task("Grocery Shopping", "Personal", "02:30 PM"),
-        Task("Team Sync Meeting", "Work", "04:00 PM"),
-        Task("Evening Workout", "Health", "06:00 PM"),
-        Task("Read 20 pages", "Education", "09:00 PM")
-    )
-    
-    private var filteredList = fullTaskList.toMutableList()
+    private val viewModel: TaskViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,14 +39,44 @@ class Dashboardscreen : AppCompatActivity() {
         initViews()
         setupSearchAndFilters()
         updateWelcomeMessage()
+        observeViewModel()
+    }
+
+    private fun observeViewModel() {
+        // Observe Task List reactively
+        viewModel.taskList.observe(this) { tasks ->
+            val selectedCategory = getSelectedCategory()
+            val filteredTasks = if (selectedCategory == "All") {
+                tasks
+            } else {
+                tasks.filter { it.category == selectedCategory }
+            }
+            
+            taskAdapter.submitList(filteredTasks)
+            emptyStateText.visibility = if (filteredTasks.isEmpty()) View.VISIBLE else View.GONE
+        }
+
+        // Dynamic Progress Monitor Calculation
+        val progressStats = findViewById<TextView>(R.id.progress_stats)
+        val progressBar = findViewById<LinearProgressIndicator>(R.id.progress_bar)
+        
+        viewModel.progressState.observe(this) { progress ->
+            progressStats.text = getString(
+                R.string.progress_stats_format, 
+                progress.completed, 
+                progress.total, 
+                progress.percentage
+            )
+            progressBar.setProgress(progress.percentage, true)
+        }
     }
 
     private fun updateWelcomeMessage() {
         val currentUser = auth.currentUser
         val welcomeText = findViewById<TextView>(R.id.welcome_user_text)
-        if (currentUser != null) {
+        if ((currentUser != null) && (welcomeText != null)) {
             val name = currentUser.displayName ?: currentUser.email?.split("@")?.get(0) ?: "User"
-            welcomeText.text = "Welcome back, $name!"
+            welcomeText.text = getString(R.string.welcome_user_greeting, name)
         }
     }
 
@@ -69,7 +91,9 @@ class Dashboardscreen : AppCompatActivity() {
         emptyStateText = findViewById(R.id.empty_state_text)
         
         recyclerView.layoutManager = LinearLayoutManager(this)
-        taskAdapter = TaskAdapter(filteredList)
+        taskAdapter = TaskAdapter { task ->
+            viewModel.toggleTaskCompletion(task)
+        }
         recyclerView.adapter = taskAdapter
 
         findViewById<ExtendedFloatingActionButton>(R.id.fab_add_task).setOnClickListener {
@@ -79,28 +103,35 @@ class Dashboardscreen : AppCompatActivity() {
         findViewById<View>(R.id.board_icon).setOnClickListener {
             startActivity(Intent(this, ProjectBoardScreen::class.java))
         }
+
+        findViewById<View>(R.id.test_interaction_icon).setOnClickListener {
+            startActivity(Intent(this, InteractionTestActivity::class.java))
+        }
     }
 
     private fun setupSearchAndFilters() {
-        // 1. Search Logic
         val searchView = findViewById<SearchView>(R.id.search_view)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean = false
-            override fun onQueryTextChange(newText: String?): Boolean {
-                filterTasks(newText, getSelectedCategory())
-                return true
-            }
-        })
+        searchView.setOnQueryTextListener(
+            object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean = false
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    viewModel.setSearchQuery(newText ?: "")
+                    return true
+                }
+            },
+        )
 
-        // 2. Chip Filter Logic
-        findViewById<ChipGroup>(R.id.filter_chip_group).setOnCheckedStateChangeListener { _, checkedIds ->
-            val category = when (checkedIds.firstOrNull()) {
-                R.id.chip_work -> "Work"
-                R.id.chip_personal -> "Personal"
-                R.id.chip_health -> "Health"
-                else -> "All"
+        findViewById<ChipGroup>(R.id.filter_chip_group).setOnCheckedStateChangeListener { _, _ ->
+            viewModel.taskList.value?.let { tasks ->
+                val selectedCategory = getSelectedCategory()
+                val filteredTasks = if (selectedCategory == "All") {
+                    tasks
+                } else {
+                    tasks.filter { it.category == selectedCategory }
+                }
+                taskAdapter.submitList(filteredTasks)
+                emptyStateText.visibility = if (filteredTasks.isEmpty()) View.VISIBLE else View.GONE
             }
-            filterTasks(searchView.query.toString(), category)
         }
     }
 
@@ -113,69 +144,4 @@ class Dashboardscreen : AppCompatActivity() {
             else -> "All"
         }
     }
-
-    private fun filterTasks(query: String?, category: String) {
-        val searchQuery = query?.lowercase() ?: ""
-        
-        filteredList.clear()
-        val results = fullTaskList.filter { task ->
-            val matchesQuery = task.title.lowercase().contains(searchQuery)
-            val matchesCategory = category == "All" || task.category == category
-            matchesQuery && matchesCategory
-        }
-        filteredList.addAll(results)
-        taskAdapter.notifyDataSetChanged()
-        
-        emptyStateText.visibility = if (filteredList.isEmpty()) View.VISIBLE else View.GONE
-    }
-}
-
-// Data Model
-data class Task(val title: String, val category: String, val time: String)
-
-// Professional Task Adapter
-class TaskAdapter(private val tasks: List<Task>) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
-
-    class TaskViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val title: TextView = view.findViewById(R.id.task_title)
-        val category: TextView = view.findViewById(R.id.task_category)
-        val time: TextView = view.findViewById(R.id.task_time)
-        val indicator: View = view.findViewById(R.id.priority_indicator)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_task, parent, false)
-        return TaskViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
-        val task = tasks[position]
-        holder.title.text = task.title
-        holder.category.text = task.category
-        holder.time.text = task.time
-        
-        val indicatorColor = when(task.category) {
-            "Work" -> 0xFF6200EE.toInt()
-            "Personal" -> 0xFF03DAC5.toInt()
-            "Health" -> 0xFFFF9800.toInt()
-            else -> 0xFF9C27B0.toInt()
-        }
-        holder.indicator.setBackgroundColor(indicatorColor)
-
-        // Navigate to Task Detail View
-        holder.itemView.setOnClickListener {
-            val context = holder.itemView.context
-            val intent = Intent(context, Taskdetailview::class.java).apply {
-                putExtra("TASK_TITLE", task.title)
-                putExtra("TASK_CATEGORY", task.category)
-                putExtra("TASK_TIME", task.time)
-                // Passing dummy description and date for now
-                putExtra("TASK_DESC", "This is a detailed description for ${task.title}. It requires focus and dedication to complete on time.")
-                putExtra("TASK_DATE", "Today, 25 Oct")
-            }
-            context.startActivity(intent)
-        }
-    }
-
-    override fun getItemCount() = tasks.size
 }

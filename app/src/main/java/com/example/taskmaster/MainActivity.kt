@@ -18,38 +18,35 @@ import com.google.firebase.auth.auth
 
 class MainActivity : ComponentActivity() {
 
-    // This creates a secure variable slot to hold our Firebase Auth connection
     private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // This hooks up your app to the Firebase cloud server using your json file
         auth = Firebase.auth
 
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background,
                 ) {
-                    // This launches the custom Login Screen interface we are about to build below
-                    LoginComponent(auth = auth, onLoginSuccess = {
-                        Toast.makeText(this, "Welcome to Taskmaster!", Toast.LENGTH_SHORT).show()
-
-                        // Navigate to ProjectBoardScreen Activity
-                        val intent = Intent(this, ProjectBoardScreen::class.java)
-                        startActivity(intent)
-                        finish()
-                    })
+                    LoginComponent(
+                        auth = auth,
+                        onLoginSuccess = {
+                            Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
+                            val intent = Intent(this, Dashboardscreen::class.java)
+                            startActivity(intent)
+                            finish()
+                        },
+                    )
                 }
             }
         }
     }
 }
+
 @Composable
 fun LoginComponent(auth: FirebaseAuth, onLoginSuccess: () -> Unit) {
-    // These hold what the user types into the boxes
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
@@ -60,54 +57,49 @@ fun LoginComponent(auth: FirebaseAuth, onLoginSuccess: () -> Unit) {
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text = "Taskmaster", style = MaterialTheme.typography.headlineLarge)
         Text(text = "Sign in to manage your projects", style = MaterialTheme.typography.bodyMedium)
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Email Text Box
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email Address") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Password Text Box
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         if (isLoading) {
-            CircularProgressIndicator() // Shows a loading wheel while checking with Firebase
+            CircularProgressIndicator()
         } else {
-            // Sign In Button
             Button(
                 onClick = {
                     if (email.isNotEmpty() && password.isNotEmpty()) {
                         isLoading = true
                         errorMessage = ""
 
-                        // THIS LINE: Sends the email and password over the internet to Firebase
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 isLoading = false
-                                if (task.isSuccessful) {android.util.Log.d("TASKMASTER_AUTH", "User email is: ${auth.currentUser?.email}")
-                                    onLoginSuccess() // Success! Runs the code in step 3
+                                if (task.isSuccessful) {
+                                    onLoginSuccess()
                                 } else {
-                                    // If something goes wrong (wrong password, no internet), show the error
                                     errorMessage = task.exception?.localizedMessage ?: "Authentication failed."
                                 }
                             }
@@ -115,13 +107,12 @@ fun LoginComponent(auth: FirebaseAuth, onLoginSuccess: () -> Unit) {
                         errorMessage = "Please enter both an email and password."
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Sign In")
             }
         }
 
-        // Show error text if there is an issue
         if (errorMessage.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
