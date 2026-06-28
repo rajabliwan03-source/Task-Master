@@ -65,7 +65,7 @@ class Dashboardscreen : AppCompatActivity() {
                 R.string.progress_stats_format, 
                 progress.completed, 
                 progress.total, 
-                progress.percentage
+                progress.percentage,
             )
             progressBar.setProgress(progress.percentage, true)
         }

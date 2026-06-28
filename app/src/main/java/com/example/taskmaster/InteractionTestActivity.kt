@@ -4,10 +4,10 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.appcompat.app.AppCompatActivity
 import com.example.taskmaster.databinding.ActivityInteractionTestBinding
+import kotlin.math.abs
 
 /**
  * InteractionTestActivity: Handles UI framework lifecycle.
@@ -53,15 +53,15 @@ class InteractionTestActivity : AppCompatActivity() {
                 val diffY = e2.y - e1.y
                 val diffX = e2.x - e1.x
 
-                if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (abs(diffX) > abs(diffY)) {
                     // Horizontal Swipe
-                    if (Math.abs(diffX) > swipeThreshold && Math.abs(velocityX) > swipeVelocityThreshold) {
+                    if (abs(diffX) > swipeThreshold && abs(velocityX) > swipeVelocityThreshold) {
                         if (diffX > 0) interactionHandler.handleGesture("SWIPE_RIGHT")
                         else interactionHandler.handleGesture("SWIPE_LEFT")
                     }
                 } else {
                     // Vertical Swipe
-                    if (Math.abs(diffY) > swipeThreshold && Math.abs(velocityY) > swipeVelocityThreshold) {
+                    if (abs(diffY) > swipeThreshold && abs(velocityY) > swipeVelocityThreshold) {
                         if (diffY > 0) interactionHandler.handleGesture("SWIPE_DOWN")
                         else interactionHandler.handleGesture("SWIPE_UP")
                     }

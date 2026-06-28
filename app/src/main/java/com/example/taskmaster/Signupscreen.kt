@@ -1,8 +1,6 @@
 package com.example.taskmaster
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Patterns
 import android.widget.TextView
 import android.widget.Toast
@@ -13,11 +11,19 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 
 class Signupscreen : AppCompatActivity() {
 
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        auth = Firebase.auth
+        
         enableEdgeToEdge()
         setContentView(R.layout.activity_signupscreen)
 
@@ -44,13 +50,7 @@ class Signupscreen : AppCompatActivity() {
             val password = passwordEditText.text.toString().trim()
 
             if (validateInputs(name, email, password, nameLayout, emailLayout, passwordLayout)) {
-                signupButton.isEnabled = false
-                signupButton.text = getString(R.string.creating_account)
-
-                Handler(Looper.getMainLooper()).postDelayed({
-                    Toast.makeText(this, "Account Created! Please Login.", Toast.LENGTH_SHORT).show()
-                    finish() // Go back to login
-                }, 1500)
+                performFirebaseSignup(email, password, signupButton)
             }
         }
 
@@ -59,13 +59,35 @@ class Signupscreen : AppCompatActivity() {
         }
     }
 
+    private fun performFirebaseSignup(email: String, password: String, signupButton: MaterialButton) {
+        signupButton.isEnabled = false
+        signupButton.text = getString(R.string.creating_account)
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                signupButton.isEnabled = true
+                signupButton.text = getString(R.string.sign_up)
+
+                if (task.isSuccessful) {
+                    Toast.makeText(this, getString(R.string.signup_success), Toast.LENGTH_SHORT).show()
+                    finish() // Go back to login
+                } else {
+                    Toast.makeText(
+                        this, 
+                        getString(R.string.auth_failed, task.exception?.message), 
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+    }
+
     private fun validateInputs(
         name: String,
         email: String,
         password: String,
         nameLayout: TextInputLayout,
         emailLayout: TextInputLayout,
-        passwordLayout: TextInputLayout
+        passwordLayout: TextInputLayout,
     ): Boolean {
         var isValid = true
         

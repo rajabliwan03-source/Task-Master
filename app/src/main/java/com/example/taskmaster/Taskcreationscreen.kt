@@ -113,7 +113,7 @@ class Taskcreationscreen : AppCompatActivity() {
 
             timePicker.addOnPositiveButtonClickListener {
                 val amPm = if (timePicker.hour < 12) "AM" else "PM"
-                val hour = if (timePicker.hour % 12 == 0) 12 else timePicker.hour % 12
+                val hour = if ((timePicker.hour % 12) == 0) 12 else timePicker.hour % 12
                 selectedTimeStr = String.format(Locale.getDefault(), "%02d:%02d %s", hour, timePicker.minute, amPm)
                 selectedTimeText.text = getString(R.string.time_format, selectedTimeStr)
             }
@@ -131,13 +131,16 @@ class Taskcreationscreen : AppCompatActivity() {
             }
         }
 
-        taskNameEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                taskNameLayout.error = null
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
+        taskNameEditText.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    taskNameLayout.error = null
+                }
+
+                override fun afterTextChanged(s: Editable?) {}
+            },
+        )
 
         categoryDropdown.setOnItemClickListener { _, _, _, _ ->
             categoryLayout.error = null
@@ -169,7 +172,7 @@ class Taskcreationscreen : AppCompatActivity() {
         }
 
         // UX: Show loading state
-        setLoading(true)
+        setLoading(isLoading = true)
 
         // Upload to Firestore using Coroutines for optimal performance
         lifecycleScope.launch {
