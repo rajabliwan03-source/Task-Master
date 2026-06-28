@@ -15,7 +15,8 @@ class InteractionHandler(
      */
     fun handleKeyboardInput(text: String) {
         val cleanText = text.trim()
-        val feedback = "User typed: $cleanText"
+        val context = feedbackDisplay.context
+        val feedback = context.getString(R.string.interaction_user_typed, cleanText)
         
         updateUI(feedback)
         eventManager.logInteraction("KEYBOARD", "Buffer: '$cleanText'")
@@ -25,7 +26,8 @@ class InteractionHandler(
      * Processes various touch gestures (Tap, Swipe, etc.)
      */
     fun handleGesture(gestureType: String) {
-        val feedback = "Gesture Detected: $gestureType"
+        val context = feedbackDisplay.context
+        val feedback = context.getString(R.string.interaction_gesture_detected, gestureType)
         
         updateUI(feedback)
         eventManager.logInteraction("GESTURE", gestureType)
