@@ -53,7 +53,7 @@ class AddTaskActivity : AppCompatActivity() {
             desc = "No description provided",
             imagePath = imageUriString,
             lat = calculatedLatitude,
-            lon = calculatedLongitude
+            lon = calculatedLongitude,
         )
 
         // 5. Lifecycle Coordination

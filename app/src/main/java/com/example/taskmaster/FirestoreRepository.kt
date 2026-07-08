@@ -12,33 +12,34 @@ import kotlinx.coroutines.tasks.await
 class FirestoreRepository {
 
     private val db: FirebaseFirestore = Firebase.firestore
-    private val TAG = "FirestoreRepository"
+    private val tag = "FirestoreRepository"
 
     /**
      * Saves a new task using the standard Firebase Listener pattern.
      * Use this if you prefer traditional callback handling.
      */
+    @Suppress("unused")
     fun saveTaskWithListeners(
         title: String,
         description: String,
         priority: String,
         onSuccess: (String) -> Unit,
-        onFailure: (Exception) -> Unit
+        onFailure: (Exception) -> Unit,
     ) {
         val task = TaskRemote(
             title = title,
             description = description,
-            priority = priority
+            priority = priority,
         )
 
         db.collection("tasks")
             .add(task)
             .addOnSuccessListener { ref ->
-                Log.d(TAG, "Task saved (Listener): ${ref.id}")
+                Log.d(tag, "Task saved (Listener): ${ref.id}")
                 onSuccess(ref.id)
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Error saving task (Listener)", e)
+                Log.e(tag, "Error saving task (Listener)", e)
                 onFailure(e)
             }
     }
@@ -55,10 +56,10 @@ class FirestoreRepository {
                 priority = priority
             )
             val documentReference = db.collection("tasks").add(task).await()
-            Log.d(TAG, "Task saved (Coroutine): ${documentReference.id}")
+            Log.d(tag, "Task saved (Coroutine): ${documentReference.id}")
             Result.success(documentReference.id)
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving task (Coroutine)", e)
+            Log.e(tag, "Error saving task (Coroutine)", e)
             Result.failure(e)
         }
     }

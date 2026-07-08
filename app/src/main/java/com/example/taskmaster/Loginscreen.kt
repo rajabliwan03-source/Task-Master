@@ -154,7 +154,7 @@ class Loginscreen : AppCompatActivity() {
                     Toast.makeText(
                         this, 
                         getString(R.string.auth_failed, task.exception?.message), 
-                        Toast.LENGTH_LONG
+                        Toast.LENGTH_LONG,
                     ).show()
                 }
             }

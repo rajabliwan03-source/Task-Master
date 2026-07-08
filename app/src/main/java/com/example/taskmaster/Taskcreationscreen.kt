@@ -78,7 +78,7 @@ class Taskcreationscreen : AppCompatActivity() {
             takePhotoLauncher.launch()
             fetchLocation()
         } else {
-            Toast.makeText(this, "Permissions denied. Cannot capture photo or GPS.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.permissions_denied), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -296,10 +296,10 @@ class Taskcreationscreen : AppCompatActivity() {
 
                 NotificationHelper.showTaskSavedNotification(this@Taskcreationscreen, name)
 
-                Toast.makeText(this@Taskcreationscreen, "Task saved locally and to Firestore!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@Taskcreationscreen, getString(R.string.task_save_success), Toast.LENGTH_SHORT).show()
                 finish()
             }.onFailure { e ->
-                Toast.makeText(this@Taskcreationscreen, "Firestore error: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@Taskcreationscreen, getString(R.string.firestore_error, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }

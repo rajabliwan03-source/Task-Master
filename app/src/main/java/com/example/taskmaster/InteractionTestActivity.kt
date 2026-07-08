@@ -39,36 +39,44 @@ class InteractionTestActivity : AppCompatActivity() {
         }
 
         // 3. Configure GestureDetector and map raw events to semantic gestures
-        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            private val swipeThreshold = 100
-            private val swipeVelocityThreshold = 100
+        gestureDetector = GestureDetector(
+            this,
+            object : GestureDetector.SimpleOnGestureListener() {
+                private val swipeThreshold = 100
+                private val swipeVelocityThreshold = 100
 
-            override fun onSingleTapUp(e: MotionEvent): Boolean {
-                interactionHandler.handleGesture("SINGLE_TAP")
-                return true
-            }
-
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                if (e1 == null) return false
-                val diffY = e2.y - e1.y
-                val diffX = e2.x - e1.x
-
-                if (abs(diffX) > abs(diffY)) {
-                    // Horizontal Swipe
-                    if (abs(diffX) > swipeThreshold && abs(velocityX) > swipeVelocityThreshold) {
-                        if (diffX > 0) interactionHandler.handleGesture("SWIPE_RIGHT")
-                        else interactionHandler.handleGesture("SWIPE_LEFT")
-                    }
-                } else {
-                    // Vertical Swipe
-                    if (abs(diffY) > swipeThreshold && abs(velocityY) > swipeVelocityThreshold) {
-                        if (diffY > 0) interactionHandler.handleGesture("SWIPE_DOWN")
-                        else interactionHandler.handleGesture("SWIPE_UP")
-                    }
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    interactionHandler.handleGesture("SINGLE_TAP")
+                    return true
                 }
-                return true
-            }
-        })
+
+                override fun onFling(
+                    e1: MotionEvent?,
+                    e2: MotionEvent,
+                    velocityX: Float,
+                    velocityY: Float,
+                ): Boolean {
+                    if (e1 == null) return false
+                    val diffY = e2.y - e1.y
+                    val diffX = e2.x - e1.x
+
+                    if (abs(diffX) > abs(diffY)) {
+                        // Horizontal Swipe
+                        if ((abs(diffX) > swipeThreshold) && (abs(velocityX) > swipeVelocityThreshold)) {
+                            if (diffX > 0) interactionHandler.handleGesture("SWIPE_RIGHT")
+                            else interactionHandler.handleGesture("SWIPE_LEFT")
+                        }
+                    } else {
+                        // Vertical Swipe
+                        if ((abs(diffY) > swipeThreshold) && (abs(velocityY) > swipeVelocityThreshold)) {
+                            if (diffY > 0) interactionHandler.handleGesture("SWIPE_DOWN")
+                            else interactionHandler.handleGesture("SWIPE_UP")
+                        }
+                    }
+                    return true
+                }
+            },
+        )
 
         // 4. Delegate Touch Events from the specific touch zone
         binding.touchZone.setOnTouchListener { _, event ->

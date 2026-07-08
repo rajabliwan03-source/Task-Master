@@ -46,7 +46,7 @@ class ProjectBoardScreen : AppCompatActivity() {
         // Dummy Data for Columns - Updated to use the new Task constructor
         val todoTasks = listOf(
             Task(title = "Research Competitors", category = "Work", time = "09:00 AM"),
-            Task(title = "Draft Design Docs", category = "Work", time = "11:30 AM")
+            Task(title = "Draft Design Docs", category = "Work", time = "11:30 AM"),
         )
         val inProgressTasks = listOf(
             Task(title = "Develop Auth Module", category = "Work", time = "02:00 PM")

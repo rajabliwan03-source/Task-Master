@@ -7,7 +7,7 @@ import android.widget.TextView
  */
 class InteractionHandler(
     private val feedbackDisplay: TextView,
-    private val eventManager: EventManager
+    private val eventManager: EventManager,
 ) {
 
     /**
