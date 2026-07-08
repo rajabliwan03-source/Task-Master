@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Production Release: Professional Splash Screen Layer List -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solid Background Color matching brand identity -->
+    <item android:drawable="@color/primaryColor" />
+
+    <!-- App Logo centered exactly in the middle of the screen -->
+    <item
+        android:drawable="@mipmap/ic_launcher"
+        android:gravity="center" />
+</layer-list>
