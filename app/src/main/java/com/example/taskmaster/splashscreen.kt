@@ -71,7 +71,7 @@ class Splashscreen : AppCompatActivity() {
             overrideActivityTransition(
                 OVERRIDE_TRANSITION_OPEN,
                 android.R.anim.fade_in,
-                android.R.anim.fade_out
+                android.R.anim.fade_out,
             )
         } else {
             @Suppress("DEPRECATION")
