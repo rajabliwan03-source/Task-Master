@@ -1,21 +1,32 @@
 package com.example.taskmaster
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.textfield.TextInputEditText
@@ -38,17 +49,58 @@ class Taskcreationscreen : AppCompatActivity() {
     private lateinit var saveButton: MaterialButton
     private lateinit var progressBar: ProgressBar
     
+    // Media View Binding
+    private lateinit var ivPhotoPreview: ImageView
+    private lateinit var tvCoordinates: TextView
+    private lateinit var btnCaptureMedia: MaterialButton
+
     private var selectedDateStr: String = ""
     private var selectedTimeStr: String = ""
+    
+    // Captured Data
+    private var capturedImagePath: String? = null
+    private var latitude: Double? = null
+    private var longitude: Double? = null
 
     private val viewModel: TaskViewModel by viewModels()
     private val firestoreRepository = FirestoreRepository()
+    private lateinit var dbHelper: DatabaseHelper
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    // 1. Permission Launcher
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { permissions ->
+        val cameraGranted = permissions[Manifest.permission.CAMERA] ?: false
+        val locationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+
+        if (cameraGranted && locationGranted) {
+            takePhotoLauncher.launch()
+            fetchLocation()
+        } else {
+            Toast.makeText(this, "Permissions denied. Cannot capture photo or GPS.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // 2. Camera Launcher
+    private val takePhotoLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            ivPhotoPreview.visibility = View.VISIBLE
+            ivPhotoPreview.setImageBitmap(bitmap)
+            capturedImagePath = dbHelper.saveImageToInternalStorage(bitmap)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
         setContentView(R.layout.activity_taskcreationscreen)
+
+        dbHelper = DatabaseHelper(this)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         initViews()
         setupToolbar()
@@ -73,6 +125,10 @@ class Taskcreationscreen : AppCompatActivity() {
         selectedTimeText = findViewById(R.id.selected_time_text)
         saveButton = findViewById(R.id.save_button)
         progressBar = findViewById(R.id.progress_bar)
+
+        ivPhotoPreview = findViewById(R.id.iv_photo_preview)
+        tvCoordinates = findViewById(R.id.tv_coordinates)
+        btnCaptureMedia = findViewById(R.id.btn_capture_media)
     }
 
     private fun setupToolbar() {
@@ -146,9 +202,48 @@ class Taskcreationscreen : AppCompatActivity() {
             categoryLayout.error = null
         }
 
+        btnCaptureMedia.setOnClickListener {
+            requestPermissionLauncher.launch(
+                arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION)
+            )
+        }
+
         saveButton.setOnClickListener {
             validateAndSaveTask()
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun fetchLocation() {
+        tvCoordinates.text = getString(R.string.location_fetching)
+        
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token)
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    latitude = location.latitude
+                    longitude = location.longitude
+                    val locString = String.format(Locale.getDefault(), "Location: %.6f, %.6f", latitude, longitude)
+                    tvCoordinates.text = locString
+                    Log.d("TaskMaster_GPS", "Location found: $latitude, $longitude")
+                } else {
+                    // Try last location if current location is null
+                    fusedLocationClient.lastLocation.addOnSuccessListener { lastLoc ->
+                        if (lastLoc != null) {
+                            latitude = lastLoc.latitude
+                            longitude = lastLoc.longitude
+                            val locString = String.format(Locale.getDefault(), "Location: %.6f, %.6f", latitude, longitude)
+                            tvCoordinates.text = locString
+                        } else {
+                            tvCoordinates.text = getString(R.string.location_gps_unavailable)
+                            Toast.makeText(this, "Enable GPS to capture location", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("TaskMaster_GPS", "Location fetch failed", e)
+                tvCoordinates.text = getString(R.string.location_error, e.message)
+            }
     }
 
     private fun validateAndSaveTask() {
@@ -171,27 +266,40 @@ class Taskcreationscreen : AppCompatActivity() {
             return
         }
 
-        // UX: Show loading state
         setLoading(isLoading = true)
 
-        // Upload to Firestore using Coroutines for optimal performance
         lifecycleScope.launch {
+            // 1. Save to Remote Firestore
             val result = firestoreRepository.saveTask(
                 title = name,
                 description = desc,
-                priority = category, // mapping category to priority for this example
+                priority = category,
             )
 
             setLoading(isLoading = false)
 
-            result.onSuccess { docId ->
-                // Also save locally to Room for offline support
-                viewModel.addTask(name, category, selectedTimeStr, selectedDateStr, desc)
+            result.onSuccess {
+                // 2. Save to Local Room Database with Media
+                viewModel.addTask(
+                    title = name,
+                    category = category,
+                    time = selectedTimeStr,
+                    date = selectedDateStr,
+                    description = desc,
+                    imagePath = capturedImagePath,
+                    latitude = latitude,
+                    longitude = longitude,
+                )
                 
-                Toast.makeText(this@Taskcreationscreen, "Task uploaded to Firestore! ID: $docId", Toast.LENGTH_SHORT).show()
+                // 3. (Optional) Save to Legacy SQLite Database if required
+                dbHelper.insertTask(name, desc, capturedImagePath, latitude ?: 0.0, longitude ?: 0.0)
+
+                NotificationHelper.showTaskSavedNotification(this@Taskcreationscreen, name)
+
+                Toast.makeText(this@Taskcreationscreen, "Task saved locally and to Firestore!", Toast.LENGTH_SHORT).show()
                 finish()
             }.onFailure { e ->
-                Toast.makeText(this@Taskcreationscreen, "Firestore upload failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@Taskcreationscreen, "Firestore error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }

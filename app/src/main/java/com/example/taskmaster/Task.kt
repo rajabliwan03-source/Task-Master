@@ -11,5 +11,8 @@ data class Task(
     val time: String,
     val description: String = "",
     val date: String = "",
+    val imagePath: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val isCompleted: Boolean = false,
 )

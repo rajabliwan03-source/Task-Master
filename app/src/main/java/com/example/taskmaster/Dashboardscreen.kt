@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -106,6 +107,15 @@ class Dashboardscreen : AppCompatActivity() {
 
         findViewById<View>(R.id.test_interaction_icon).setOnClickListener {
             startActivity(Intent(this, InteractionTestActivity::class.java))
+        }
+
+        // Logout functionality
+        findViewById<View>(R.id.profile_icon).setOnClickListener {
+            auth.signOut()
+            Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, Authenticationscreen::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
         }
     }
 

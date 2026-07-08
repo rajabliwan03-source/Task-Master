@@ -12,12 +12,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 @SuppressLint("CustomSplashScreen")
 class Splashscreen : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        NotificationHelper.initNotificationChannel(this)
         
         enableEdgeToEdge()
         setContentView(R.layout.activity_splashscreen)
@@ -41,18 +45,26 @@ class Splashscreen : AppCompatActivity() {
             logoContainer.startAnimation(fadeIn)
         }
 
-        // Delayed navigation to Authentication Screen
+        // Delayed navigation check
         Handler(Looper.getMainLooper()).postDelayed(
             {
-                navigateToAuth()
+                checkAuthAndNavigate()
             },
             2500,
         )
     }
 
-    private fun navigateToAuth() {
-        val intent = Intent(this, Authenticationscreen::class.java)
-        startActivity(intent)
+    private fun checkAuthAndNavigate() {
+        val user = Firebase.auth.currentUser
+        if (user != null) {
+            // User is signed in, go to Dashboard
+            val intent = Intent(this, Dashboardscreen::class.java)
+            startActivity(intent)
+        } else {
+            // No user is signed in, go to Auth Screen
+            val intent = Intent(this, Authenticationscreen::class.java)
+            startActivity(intent)
+        }
         
         // Handle activity transition based on API level
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

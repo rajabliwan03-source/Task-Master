@@ -16,9 +16,9 @@ import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.auth
 
 class Loginscreen : AppCompatActivity() {
 
@@ -43,10 +43,12 @@ class Loginscreen : AppCompatActivity() {
 
     private fun initViews() {
         val mainView = findViewById<View>(R.id.main)
-        ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        if (mainView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainView) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+                insets
+            }
         }
 
         emailLayout = findViewById(R.id.email_layout)
@@ -57,6 +59,7 @@ class Loginscreen : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        // Clear errors on text change
         val textWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -77,6 +80,11 @@ class Loginscreen : AppCompatActivity() {
             val intent = Intent(this, Signupscreen::class.java)
             startActivity(intent)
         }
+
+        // Forgot Password Feature
+        findViewById<TextView>(R.id.forgot_password_text).setOnClickListener {
+            handleForgotPassword()
+        }
     }
 
     private fun handleLogin() {
@@ -87,6 +95,22 @@ class Loginscreen : AppCompatActivity() {
 
         if (validateInputs(email, password)) {
             performFirebaseLogin(email, password)
+        }
+    }
+
+    private fun handleForgotPassword() {
+        val email = emailEditText.text.toString().trim()
+        if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailLayout.error = "Enter a valid email to reset password"
+            return
+        }
+
+        auth.sendPasswordResetEmail(email).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Toast.makeText(this, "Reset link sent to your email", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -122,12 +146,16 @@ class Loginscreen : AppCompatActivity() {
                 loginButton.text = getString(R.string.login_button)
 
                 if (task.isSuccessful) {
-                    Toast.makeText(this, "Welcome to TaskMaster!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
                     val intent = Intent(this, Dashboardscreen::class.java)
                     startActivity(intent)
                     finish()
                 } else {
-                    Toast.makeText(this, "Authentication failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this, 
+                        getString(R.string.auth_failed, task.exception?.message), 
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
     }

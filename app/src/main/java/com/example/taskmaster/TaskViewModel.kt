@@ -38,8 +38,28 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         _searchQuery.value = query
     }
 
-    fun addTask(title: String, category: String, time: String, date: String, description: String) = viewModelScope.launch {
-        repository.insert(Task(title = title, category = category, time = time, date = date, description = description))
+    fun addTask(
+        title: String,
+        category: String,
+        time: String,
+        date: String,
+        description: String,
+        imagePath: String? = null,
+        latitude: Double? = null,
+        longitude: Double? = null,
+    ) = viewModelScope.launch {
+        repository.insert(
+            Task(
+                title = title,
+                category = category,
+                time = time,
+                date = date,
+                description = description,
+                imagePath = imagePath,
+                latitude = latitude,
+                longitude = longitude,
+            ),
+        )
     }
 
     fun toggleTaskCompletion(task: Task) = viewModelScope.launch {

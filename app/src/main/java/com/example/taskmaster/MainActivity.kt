@@ -21,6 +21,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // IMPORTANT: Swap theme BEFORE super.onCreate() to remove Splash background
+        setTheme(R.style.Theme_TaskMaster)
+
         super.onCreate(savedInstanceState)
         auth = Firebase.auth
 
